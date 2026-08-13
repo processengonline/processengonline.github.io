@@ -277,6 +277,42 @@
   .btn:active{ transform:translateY(0); }
   .btn svg{ width:14px; height:14px; }
 
+  .maintenance-box{
+    display:inline-flex; flex-direction:column; gap:8px;
+    padding:14px 20px; border-radius:4px;
+    border:1.5px dashed var(--hazard);
+    background:rgba(216,83,28,0.06);
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .maintenance-label{
+    display:flex; align-items:center; gap:8px;
+    font-size:.85rem; font-weight:600; letter-spacing:.02em;
+    color:var(--hazard);
+  }
+  .maintenance-dot{
+    width:8px; height:8px; border-radius:50%;
+    background:var(--hazard);
+    animation:maintenance-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes maintenance-pulse{
+    0%,100%{ opacity:1; }
+    50%{ opacity:.35; }
+  }
+  @media (prefers-reduced-motion: reduce){ .maintenance-dot{ animation:none; } }
+  .maintenance-sub{ font-size:.75rem; color:var(--ink); opacity:.75; }
+  .maintenance-countdown{
+    display:flex; gap:14px; margin-top:2px;
+  }
+  .maintenance-unit{ text-align:center; }
+  .maintenance-num{
+    display:block; font-size:1.3rem; font-weight:700; color:var(--ink);
+    font-variant-numeric:tabular-nums;
+  }
+  .maintenance-unit-label{
+    display:block; font-size:.65rem; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--ink); opacity:.6;
+  }
+
   /* ---------- section shell ---------- */
   section{
     position:relative;
@@ -553,7 +589,27 @@
             </div>
 
             <div class="datasheet-foot">
-              <a class="btn primary" href="https://processengonline.github.io/Process-Engineering-Toolkit/" target="_blank" rel="noopener">Open Live Site</a>
+              <div class="maintenance-box">
+                <div class="maintenance-label">
+                  <span class="maintenance-dot"></span>
+                  Site under maintenance — back in 48 hours
+                </div>
+                <div class="maintenance-countdown" id="maintenance-countdown">
+                  <div class="maintenance-unit">
+                    <span class="maintenance-num" id="mc-hours">48</span>
+                    <span class="maintenance-unit-label">Hours</span>
+                  </div>
+                  <div class="maintenance-unit">
+                    <span class="maintenance-num" id="mc-minutes">00</span>
+                    <span class="maintenance-unit-label">Min</span>
+                  </div>
+                  <div class="maintenance-unit">
+                    <span class="maintenance-num" id="mc-seconds">00</span>
+                    <span class="maintenance-unit-label">Sec</span>
+                  </div>
+                </div>
+                <div class="maintenance-sub">Checking again for the live site once the timer runs out.</div>
+              </div>
             </div>
           </div>
         </div>
@@ -577,6 +633,43 @@
     });
   }, { threshold: .15 });
   revealEls.forEach(el => io.observe(el));
+
+  // Maintenance countdown — fixed 48-hour window.
+  // MAINTENANCE_END is a fixed absolute deadline (not "48h from each visitor's load time"),
+  // so every visitor sees the same countdown. Update this ISO timestamp to (actual publish time + 48h)
+  // before deploying.
+  const MAINTENANCE_END = new Date('2026-08-15T00:00:00Z').getTime();
+
+  function updateMaintenanceCountdown(){
+    const hoursEl = document.getElementById('mc-hours');
+    const minutesEl = document.getElementById('mc-minutes');
+    const secondsEl = document.getElementById('mc-seconds');
+    if(!hoursEl) return;
+
+    const remainingMs = MAINTENANCE_END - Date.now();
+    if(remainingMs <= 0){
+      hoursEl.textContent = '00';
+      minutesEl.textContent = '00';
+      secondsEl.textContent = '00';
+      const label = document.querySelector('.maintenance-label');
+      if(label) label.lastChild.textContent = ' Maintenance window complete — refresh to check the live site';
+      return;
+    }
+
+    const totalSeconds = Math.floor(remainingMs / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    hoursEl.textContent = String(hours).padStart(2, '0');
+    minutesEl.textContent = String(minutes).padStart(2, '0');
+    secondsEl.textContent = String(seconds).padStart(2, '0');
+
+    requestAnimationFrame(() => {
+      setTimeout(updateMaintenanceCountdown, 1000);
+    });
+  }
+  updateMaintenanceCountdown();
 </script>
 
 </body>
